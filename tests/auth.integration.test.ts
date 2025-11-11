@@ -8,8 +8,8 @@ const ADMIN_EMAIL = process.env.SEED_ADMIN1_EMAIL;
 const ADMIN_PASSWORD = process.env.SEED_ADMIN1_PASSWORD;
 
 if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
-  // eslint-disable-next-line no-console
-  console.warn('Skipping integration tests for /auth/login because SEED_ADMIN1_EMAIL/SEED_ADMIN1_PASSWORD are not set.');
+  // If env not provided, register a skipped test so Jest doesn't error about no tests.
+  test.skip('Skipping integration tests for /auth/login because SEED_ADMIN1_EMAIL/SEED_ADMIN1_PASSWORD are not set.', () => {});
 } else {
   describe('POST /auth/login (integration)', () => {
     it('logs in seeded admin and returns token that can access admin route', async () => {
