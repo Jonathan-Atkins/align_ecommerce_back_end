@@ -26,13 +26,15 @@
     "express": "^5.1.0",
     "prisma": "^6.19.0",
     "@prisma/client": "^6.19.0",
-    "bcrypt": "^5.1.0"
+    "bcrypt": "^5.1.0",
+    "jsonwebtoken": "^9.0.0"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
   },
   "devDependencies": {
     "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.0",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.10.0",
     "@types/supertest": "^6.0.3",
