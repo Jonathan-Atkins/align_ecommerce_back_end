@@ -94,6 +94,53 @@ git remote add upstream git@github.com:Jonathan-Atkins/align_ecommerce_back_end.
 - Provide Prisma schema (`prisma/schema.prisma`) and any migrations
 - Add documentation for environment variables and local development
 
+## Seeding the database
+
+We provide a runnable seed script at `prisma/seed.js` that upserts two admin users. To run it locally (make sure your `.env` or environment contains `DATABASE_URL`):
+
+```bash
+# Optionally export the admin creds you want to use
+export SEED_ADMIN1_EMAIL='josh@alignecommerce.com'
+export SEED_ADMIN1_PASSWORD='your-admin-password'
+export SEED_ADMIN2_EMAIL='jonathanatkins.dev@gmail.com'
+export SEED_ADMIN2_PASSWORD='your-admin-password'
+
+# Apply schema (push) and generate client
+npx prisma db push
+npx prisma generate
+
+# Run the seed script
+npm run prisma:seed
+```
+
+Note: The repository contains both `prisma/seed.ts` (TypeScript source) and `prisma/seed.js` (runnable). The TypeScript source may be removed; `prisma/seed.js` is the canonical script used by `npm run prisma:seed`.
+
+## Integration tests
+
+We include integration tests for `/auth/login` that validate seeded admin credentials can log in and access protected admin endpoints. These tests read `SEED_ADMIN1_EMAIL` and `SEED_ADMIN1_PASSWORD` from environment variables and will be skipped if those are not set.
+
+To run integration tests locally, ensure your `.env` has `DATABASE_URL` and set the seed admin env vars as above, then run:
+
+```bash
+npx jest tests/auth.integration.test.ts --runInBand
+```
+
+## GitHub Actions & secrets
+
+The repo contains two workflows:
+- `.github/workflows/ci.yml` — runs unit tests and generates the Prisma client on push/PR.
+- `.github/workflows/integration.yml` — runs integration tests, applies schema and seeds the DB. This workflow requires repository secrets.
+
+Add the following repository secrets in GitHub (Settings → Secrets and variables → Actions → New repository secret):
+
+- `DATABASE_URL` — your Neon/Postgres connection string
+- `SEED_ADMIN1_EMAIL` and `SEED_ADMIN1_PASSWORD` — credentials for the seeded admin used by integration tests
+- `SEED_ADMIN2_EMAIL` and `SEED_ADMIN2_PASSWORD` — optional second admin
+- `JWT_SECRET` — the JWT secret used to sign tokens (should match the secret used by the server)
+
+Once secrets are set, integration workflow runs will be able to apply schema, seed data and execute the integration tests.
+
+
 ## License
 The project `package.json` lists the license as ISC.
 

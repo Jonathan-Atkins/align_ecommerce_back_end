@@ -1,0 +1,34 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ setup, main ]
+  pull_request:
+    branches: [ setup, main ]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      SEED_ADMIN1_EMAIL: ${{ secrets.SEED_ADMIN1_EMAIL }}
+      SEED_ADMIN1_PASSWORD: ${{ secrets.SEED_ADMIN1_PASSWORD }}
+      SEED_ADMIN2_EMAIL: ${{ secrets.SEED_ADMIN2_EMAIL }}
+      SEED_ADMIN2_PASSWORD: ${{ secrets.SEED_ADMIN2_PASSWORD }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Install dependencies
+        run: npm ci
+      - name: Generate Prisma client
+        run: npm run prisma:generate
+      - name: Run migrations (apply schema)
+        run: npx prisma db push
+      - name: Seed database
+        run: npm run prisma:seed
+      - name: Run integration tests
+        run: npx jest tests/auth.integration.test.ts --runInBand
