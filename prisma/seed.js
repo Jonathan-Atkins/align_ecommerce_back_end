@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcrypt';
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcrypt');
 
 const prisma = new PrismaClient();
 
@@ -29,7 +29,6 @@ async function main() {
 
 main()
   .catch((e) => {
-    // eslint-disable-next-line no-console
     console.error(e);
     process.exit(1);
   })
