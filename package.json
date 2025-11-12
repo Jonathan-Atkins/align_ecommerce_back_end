@@ -23,19 +23,21 @@
   "homepage": "https://github.com/Jonathan-Atkins/align_ecommerce_back_end#readme",
   "description": "",
   "dependencies": {
-    "express": "^5.1.0",
-    "prisma": "^6.19.0",
     "@prisma/client": "^6.19.0",
     "bcrypt": "^5.1.0",
-    "jsonwebtoken": "^9.0.0"
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.0",
+    "prisma": "^6.19.0"
   },
   "prisma": {
-    "seed": "ts-node prisma/seed.ts"
+    "seed": "node prisma/seed.js"
   },
   "devDependencies": {
+    "@types/cookie-parser": "^1.4.10",
     "@types/express": "^5.0.5",
-    "@types/jsonwebtoken": "^9.0.0",
     "@types/jest": "^30.0.0",
+    "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^24.10.0",
     "@types/supertest": "^6.0.3",
     "jest": "^29.7.0",
