@@ -1,0 +1,36 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  password      String
+  name          String?
+  role          Role           @default(USER)
+  createdAt     DateTime       @default(now())
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id         String   @id // will store jti UUID
+  tokenHash  String
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  replacedBy String?
+}
+
+// Datasource is configured in prisma.config.ts; schema models are defined here.
