@@ -156,6 +156,18 @@ Security notes:
 - The server persists a hash of the refresh token and rotates/revokes it on refresh or logout. This prevents stolen refresh tokens from being reused.
 - For production, consider adding device/session tracking and storing only a hashed token in the DB (not plaintext). The code in this repo already uses SHA-256 token hashing.
 
+## Test coverage
+
+We use Jest's built-in coverage (Istanbul) to generate coverage reports. Run locally:
+
+```bash
+npm run test:coverage
+```
+
+This produces `coverage/` with an `lcov` report suitable for Codecov and an `html` report you can open locally.
+
+To upload coverage to Codecov in CI, add the `CODECOV_TOKEN` secret to your repository (required for private repos) and the included GitHub Action will upload `coverage/lcov.info`.
+
 To run integration tests locally, ensure your `.env` has `DATABASE_URL` and set the seed admin env vars as above, then run:
 
 ```bash
