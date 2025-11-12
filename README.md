@@ -119,6 +119,43 @@ Note: The repository contains both `prisma/seed.ts` (TypeScript source) and `pri
 
 We include integration tests for `/auth/login` that validate seeded admin credentials can log in and access protected admin endpoints. These tests read `SEED_ADMIN1_EMAIL` and `SEED_ADMIN1_PASSWORD` from environment variables and will be skipped if those are not set.
 
+## Refresh token migration & client example
+
+If you updated the schema to persist refresh tokens, run the migration locally (or in CI) before running the app:
+
+```bash
+# create and apply migration, then generate client
+npx prisma migrate dev --name add-refresh-token
+npx prisma generate
+```
+
+Client-side cookie-based refresh flow (browser / SPA):
+
+```js
+// call login endpoint; server sets httpOnly refresh cookie and returns short-lived access token
+const loginRes = await fetch(`${API_URL}/auth/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password }),
+  credentials: 'include', // include cookies
+});
+const { token } = await loginRes.json();
+
+// use token for authenticated calls
+await fetch(`${API_URL}/admin/secret`, { headers: { Authorization: `Bearer ${token}` } });
+
+// when access token expires, ask server to refresh using cookie
+const refreshRes = await fetch(`${API_URL}/auth/refresh`, { method: 'POST', credentials: 'include' });
+const { token: newToken } = await refreshRes.json();
+
+// logout (server will clear refresh cookie)
+await fetch(`${API_URL}/auth/logout`, { method: 'POST', credentials: 'include' });
+```
+
+Security notes:
+- The server persists a hash of the refresh token and rotates/revokes it on refresh or logout. This prevents stolen refresh tokens from being reused.
+- For production, consider adding device/session tracking and storing only a hashed token in the DB (not plaintext). The code in this repo already uses SHA-256 token hashing.
+
 To run integration tests locally, ensure your `.env` has `DATABASE_URL` and set the seed admin env vars as above, then run:
 
 ```bash

@@ -1,9 +1,11 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import { signToken, signRefreshToken, verifyToken } from '../utils/jwt';
+import { hashToken, constantTimeEquals } from '../utils/hash';
 
-const prisma = new PrismaClient();
+export let prisma = new PrismaClient();
 const router = express.Router();
 
 // POST /auth/login
@@ -19,7 +21,19 @@ router.post('/login', async (req, res) => {
   if (!match) return res.status(401).json({ error: 'invalid credentials' });
 
   const accessToken = signToken({ sub: user.id, role: user.role });
-  const refreshToken = signRefreshToken({ sub: user.id, role: user.role });
+  const jti = randomUUID();
+  const refreshToken = signRefreshToken({ sub: user.id, role: user.role, jti });
+
+  // persist refresh token record (store a hash, not plaintext)
+  const tokenHash = hashToken(refreshToken);
+  await prisma.refreshToken.create({
+    data: {
+      id: jti,
+      tokenHash,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
 
   const isProd = process.env.NODE_ENV === 'production';
   // set httpOnly refresh cookie
@@ -42,8 +56,34 @@ router.post('/refresh', async (req, res) => {
 
   try {
     const verified: any = verifyToken(refreshToken);
+    // verify saved token and revoked status
+    const tokenRecord = await prisma.refreshToken.findUnique({ where: { id: verified.jti } });
+    if (!tokenRecord || tokenRecord.revoked) return res.status(401).json({ error: 'Invalid refresh token' });
+
+    // compare hashes
+    const presentedHash = hashToken(refreshToken);
+    if (!constantTimeEquals(presentedHash, tokenRecord.tokenHash)) {
+      // possible token theft or reuse
+      await prisma.refreshToken.updateMany({ where: { id: tokenRecord.id }, data: { revoked: true } });
+      return res.status(401).json({ error: 'Invalid refresh token' });
+    }
+
     const accessToken = signToken({ sub: verified.sub, role: verified.role });
-    const newRefresh = signRefreshToken({ sub: verified.sub, role: verified.role });
+    const newJti = randomUUID();
+    const newRefresh = signRefreshToken({ sub: verified.sub, role: verified.role, jti: newJti });
+
+    // mark old token revoked and reference replacement
+    await prisma.refreshToken.update({ where: { id: tokenRecord.id }, data: { revoked: true, replacedBy: newJti } });
+    // persist new refresh token (store hash)
+    const newHash = hashToken(newRefresh);
+    await prisma.refreshToken.create({
+      data: {
+        id: newJti,
+        tokenHash: newHash,
+        userId: tokenRecord.userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      },
+    });
 
     const isProd = process.env.NODE_ENV === 'production';
     res.cookie('refreshToken', newRefresh, {
@@ -62,7 +102,18 @@ router.post('/refresh', async (req, res) => {
 
 // POST /auth/logout
 // clears refresh cookie
-router.post('/logout', (_req, res) => {
+router.post('/logout', async (req, res) => {
+  const { refreshToken } = req.cookies || {};
+  if (refreshToken) {
+    try {
+      const verified: any = verifyToken(refreshToken);
+      // mark token revoked if exists
+      await prisma.refreshToken.updateMany({ where: { id: verified.jti }, data: { revoked: true } });
+    } catch (e) {
+      // ignore
+    }
+  }
+
   const isProd = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', { httpOnly: true, secure: isProd, sameSite: 'lax', path: '/' });
   return res.json({ ok: true });
